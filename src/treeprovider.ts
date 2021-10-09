@@ -1,10 +1,7 @@
 import * as vscode from 'vscode';
-import OpenAPIClientAxios from 'openapi-client-axios';
-import { Client as CloudBuildClient } from './cloudbuildapi';
+import { ApiLoader, BuildInfo } from './apiloader';
 
-const cloudBuildLogUrlBase = "https://build-api.cloud.unity3d.com";
-
-export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeItem> {
+export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeItem | NoBuildsTreeItem> {
     apiLoader: ApiLoader;
     private onDidChangeTreeDataEmitter: vscode.EventEmitter<BuildTreeItem | undefined | null | void> = new vscode.EventEmitter<BuildTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<BuildTreeItem | undefined | null | void> = this.onDidChangeTreeDataEmitter.event;
@@ -17,11 +14,11 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         this.onDidChangeTreeDataEmitter.fire();
     }
 
-    getTreeItem(element: BuildTreeItem): vscode.TreeItem {
+    getTreeItem(element: (BuildTreeItem|NoBuildsTreeItem)): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: BuildTreeItem): Thenable<BuildTreeItem[]> {
+    getChildren(element?: (BuildTreeItem|NoBuildsTreeItem)): Thenable<(BuildTreeItem|NoBuildsTreeItem)[]> {
         if (element) {
             return Promise.resolve([]);
         } else {
@@ -29,19 +26,27 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         }
     }
 
-    getRootItems(): Thenable<BuildTreeItem[]>
-    {
+    getRootItems(): Thenable<(BuildTreeItem|NoBuildsTreeItem)[]>
+    { 
+        if (!this.apiLoader.isConfigured()) {
+            return Promise.resolve([]);
+        }
         return new Promise((resolve, reject) => {
             this.LoadBuilds(resolve, reject);
         });
     }
 
-    async LoadBuilds(resolve: (value: BuildTreeItem[]) => void, reject) {
+    async LoadBuilds(resolve: (value: (BuildTreeItem|NoBuildsTreeItem)[]) => void, reject) {
         try {
             const builds = await this.apiLoader.getBuilds();
             if (builds != null) {
-                const buildItems = builds.map(i => new BuildTreeItem(i, vscode.TreeItemCollapsibleState.Collapsed));
+                if (builds.length > 0) {
+                const buildItems = builds.map(i => new BuildTreeItem(i));
                 resolve(buildItems);
+                }
+                else {
+                    resolve([new NoBuildsTreeItem()]);
+                }
             }
             else {
                 reject();
@@ -52,68 +57,24 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
     }
 }
 
-export class ApiLoader
-{
-    api: OpenAPIClientAxios;
-
-    constructor(definitionFilePath: string) {
-        this.api = new OpenAPIClientAxios(
-            {
-                definition: definitionFilePath,
-                axiosConfigDefaults: {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Basic ' + this.getApiKey(),
-                    },
-                },
-                withServer: { url: 'https://build-api.cloud.unity3d.com/api/v1/', description: 'cloud build api server' }
-            }
-        );
-		
-    }
-
-    getApiKey(): string {
-        return vscode.workspace.getConfiguration('unitycloudbuild-viewer')?.get("apiKey") ?? "";
-    }
-
-    async getBuilds(): Promise<BuildInfo[]>
-    {
-        const client = await this.api.init<CloudBuildClient>();
-        const res = await client.getBuilds({orgid: "psychicvrlab", projectid: "styly-vr-auto-build", buildtargetid: "_all"});
-        const builds = res.data.slice(0, 20);
-        const buildInfos = builds.map(i => new BuildInfo(i));
-        return buildInfos;
-    }
-}
-
-// simple data model
-class BuildInfo
-{
-    build?: number;
-    buildTargetId?: string;
-    buildTargetName?: string;
-    logUrl?: string;
-
-    constructor(build: any) {
-        console.log("creating BuildInfo.", build);
-        this.build = build.build;
-        this.buildTargetId = build.buildtargetid;
-        this.buildTargetName = build.buildTargetName;
-        const logLink = build.links?.log?.href;
-        this.logUrl = (logLink != null) ? (cloudBuildLogUrlBase + logLink) : "";
-    }
-}
-
 // custom tree item for builds
 export class BuildTreeItem extends vscode.TreeItem {
     logUrl: string;
     buildInfo: BuildInfo;
     constructor(
-        buildInfo: BuildInfo,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState
+        buildInfo: BuildInfo
     ) {
-        super(buildInfo.buildTargetName + " #" + buildInfo.build, collapsibleState);
+        super(buildInfo.buildTargetName + " #" + buildInfo.build, vscode.TreeItemCollapsibleState.None);
         this.buildInfo = buildInfo;
         this.contextValue = "builditem";
+        this.description = buildInfo.buildStatus;
+    }
+}
+
+// no item for builds
+export class NoBuildsTreeItem extends vscode.TreeItem {
+    constructor(
+    ) {
+        super("No builds found", vscode.TreeItemCollapsibleState.None);
     }
 }

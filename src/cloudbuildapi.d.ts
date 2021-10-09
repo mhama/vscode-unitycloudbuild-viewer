@@ -1,3 +1,6 @@
+// cloudbuildapi.d.ts was created automatically by typegen (openapi-client-axios-typegen) with cloudbuildapi.json (which is provided by Unity Cloud Build API)
+// but I modified a bit so that it compiles.
+
 import {
   OpenAPIClient,
   Parameters,

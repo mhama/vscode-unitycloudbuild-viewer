@@ -1,6 +1,6 @@
 {
   "name": "unitycloudbuild-viewer",
-  "displayName": "UnityCloudBuildViewer",
+  "displayName": "Unity Cloud Build Viewer",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -10,25 +10,19 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:unitycloudbuild-viewer.helloWorld",
-    "onCommand:unitycloudbuild-viewer.listBuilds",
+    "onCommand:unitycloudbuild-viewer.setup",
     "onView:cloudbuildexplorer"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "unitycloudbuild-viewer.helloWorld",
-        "title": "Hello World"
-      },
-      {
-        "command": "unitycloudbuild-viewer.listBuilds",
-        "title": "UnityCloudBuild: List Builds"
+        "command": "unitycloudbuild-viewer.setup",
+        "title": "Unity Cloud Build Viewer: Setup"
       },
       {
         "command": "unitycloudbuild-viewer.reload",
-        "title": "Reload (unstable)",
-        "icon____": "$(refresh)"
+        "title": "Reload"
       },
       {
         "command": "cloudbuildexplorer.refreshEntry",
@@ -38,6 +32,14 @@
       {
         "command": "cloudbuildexplorer.viewTextLog",
         "title": "View Text Log"
+      },
+      {
+        "command": "cloudbuildexplorer.openBuildDetails",
+        "title": "Open Build Details"
+      },
+      {
+        "command": "unitycloudbuilddetail.viewTextLog",
+        "title": "View Text Log"
       }
     ],
     "menus": {
@@ -46,6 +48,11 @@
           "command": "unitycloudbuild-viewer.reload",
           "group": "navigation",
           "when": "resourceScheme == unitycloudbuildviewer"
+        },
+        {
+          "command": "unitycloudbuilddetail.viewTextLog",
+          "group": "navigation",
+          "when": "resourceScheme == unitycloudbuilddetail"
         }
       ],
       "view/title": [
@@ -66,17 +73,23 @@
       "explorer": [
         {
           "id": "cloudbuildexplorer",
-          "name": "Cloud Build Explorer"
+          "name": "Unity Cloud Build"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "cloudbuildexplorer",
+        "contents": "UnityCloudBuild Viewer may not setup correctly.\n[Setup](command:unitycloudbuild-viewer.setup)"
+      }
+    ],
     "configuration": {
-      "title": "UnityCloudBuildViewer",
+      "title": "Unity Cloud Build Viewer",
       "properties": {
         "unitycloudbuild-viewer.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API Key for Unity Cloud Build"
+          "description": "API Key for Unity Cloud Build. It can be retrieved from the Settings screen of Unity Cloud Build."
         }
       }
     }

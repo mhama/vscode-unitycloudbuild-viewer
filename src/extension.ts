@@ -1,82 +1,80 @@
 import * as vscode from 'vscode';
-import OpenAPIClientAxios from 'openapi-client-axios';
-// cloudbuildapi.d.ts was created by typegen (openapi-client-axios-typegen) with cloudbuildapi.json
-import { Client as CloudBuildClient } from './cloudbuildapi';
 import { CloudBuildLogContentProvider } from './logprovider';
-import { ApiLoader, BuildTreeDataProvider, BuildTreeItem } from './treeprovider';
+import { BuildTreeDataProvider, BuildTreeItem, NoBuildsTreeItem } from './treeprovider';
+import { ApiLoader, ProjectInfo } from './apiloader';
+import { BuildDetailContentProvider } from './builddetailprovider';
 
 const cloudBuildLogScheme = "unitycloudbuildviewer";
-const cloudBuildLogUrlBase = "https://build-api.cloud.unity3d.com";
+const cloudBuildDetailScheme = "unitycloudbuilddetail"
+//const cloudBuildLogUrlBase = "https://build-api.cloud.unity3d.com";
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	console.log("apikey: " + getApiKey());
-	const api = new OpenAPIClientAxios(
-		{
-			definition: context.extensionPath + "/cloudbuildapi.json",
-			axiosConfigDefaults: {
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': 'Basic ' + getApiKey(),
-				},
-			},
-			withServer: { url: 'https://build-api.cloud.unity3d.com/api/v1/', description: 'cloud build api server' }
-		}
-	);
-		
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "unitycloudbuild-viewer" is now active!');
 
+	// setup Build Log Virtual Document
 	const logProvider = new CloudBuildLogContentProvider();
-	vscode.workspace.registerTextDocumentContentProvider(cloudBuildLogScheme, logProvider);
+	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(cloudBuildLogScheme, logProvider));
 
-	const apiLoader = new ApiLoader(context.extensionPath + "/cloudbuildapi.json");
+	// setup Build Detail Virtual Document
+	const buildDetailProvider = new BuildDetailContentProvider();
+	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(cloudBuildDetailScheme, buildDetailProvider));
+
+	// setup Tree View
+	const apiLoader = new ApiLoader(context, context.extensionPath + "/cloudbuildapi.json");
 	const buildTreeDataProvider = new BuildTreeDataProvider(apiLoader);
-	vscode.window.registerTreeDataProvider(
-		'cloudbuildexplorer',
-		buildTreeDataProvider,
-	);
-	vscode.commands.registerCommand('cloudbuildexplorer.refreshEntry', () =>
-		buildTreeDataProvider.refresh()
-  	);
+	const treeView = createTreeView(buildTreeDataProvider, buildDetailProvider);
 
-	vscode.commands.registerCommand('cloudbuildexplorer.viewTextLog', async (build: BuildTreeItem) => {
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.refreshEntry', () =>
+		buildTreeDataProvider.refresh()
+  	));
+
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.viewTextLog', async (build: BuildTreeItem) => {
 		if (build.buildInfo.logUrl != null) {
-			let uri = vscode.Uri.parse(cloudBuildLogScheme + ":" + build.buildInfo.logUrl + "/" + build.buildInfo.buildTargetId + "-" + build.buildInfo.build);
+			let uri = build.buildInfo.getLogTextUri();
 			logProvider.setApiKey(getApiKey());
-			let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
+			let doc = await vscode.workspace.openTextDocument(uri);
 			await vscode.window.showTextDocument(doc, { preview: false });
 		}
-	});
+	}));
 
-  // The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('unitycloudbuild-viewer.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from UnityCloudBuildViewer!');
-	});
+	context.subscriptions.push(vscode.commands.registerCommand('unitycloudbuild-viewer.setup', async () => {
+		if (getApiKey() == "") {
+			var selection = await vscode.window.showErrorMessage("Before setup, please set the Api Key setting in the User Settings.", "Open Settings");
+			if (selection == "Open Settings") {
+				openSettings();
+			}
+			return;
+		}
+		// setup
+		let projects: ProjectInfo[];
+		try {
+			projects = await apiLoader.readProjects();
+		}
+		catch(e) {
+			console.error(e);
+			vscode.window.showErrorMessage('Setup of UnityCloudBuildViewer failed! ApiKey setting may be wrong.');
+			return;
+		}
+		const pickItems = projects.map(p => new (class implements vscode.QuickPickItem {
+			label: string = `"${p.name}" project of "${p.orgName}" organization`;
+			project: ProjectInfo = p;
+		}));
+		const result = await vscode.window.showQuickPick(pickItems, {
+			placeHolder: 'Please select the target project',
+		})
+		if (result == null) {
+			vscode.window.showInformationMessage('Setup of UnityCloudBuildViewer canceled.');
+			return;
+		}
+		context.globalState["projectId"] = result.project.projectId;
+		context.globalState["orgId"] = result.project.orgId;
+		context.globalState.setKeysForSync(["projectId", "orgId"]);
+		buildTreeDataProvider.refresh();
+		//vscode.commands.executeCommand("onView:cloudbuildexplorer");
+		vscode.window.showInformationMessage('Setup of UnityCloudBuildViewer completed!');
+	}));
 
-	let disposable2 = vscode.commands.registerCommand('unitycloudbuild-viewer.listBuilds', async () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		/*
-		const client = await api.init<CloudBuildClient>();
-		const url = await readBuilds(client);
-		let uri = vscode.Uri.parse(cloudBuildLogScheme + ":" + url);
-
-		logProvider.setApiKey(getApiKey());
-		let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
-
-		await vscode.window.showTextDocument(doc, { preview: false });
-		*/
-		vscode.window.showInformationMessage('List Builds from UnityCloudBuildViewer!');
-	});
-
-	let disposable3 = vscode.commands.registerCommand('unitycloudbuild-viewer.reload', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('unitycloudbuild-viewer.reload', () => {
 		if (!vscode.window.activeTextEditor) {
 			return;
 		  }
@@ -86,11 +84,14 @@ export function activate(context: vscode.ExtensionContext) {
 		  }
 		  logProvider.setApiKey(getApiKey());
 		  logProvider.reload(document.uri);
-		  vscode.window.showInformationMessage('Reload from UnityCloudBuildViewer!');
-	});
+	}));
 
-
-	context.subscriptions.push(disposable, disposable2, disposable3);
+	context.subscriptions.push(vscode.commands.registerCommand('unitycloudbuilddetail.viewTextLog', async () => {
+		let uri = buildDetailProvider.currentBuild.getLogTextUri();
+		logProvider.setApiKey(getApiKey());
+		let doc = await vscode.workspace.openTextDocument(uri);
+		await vscode.window.showTextDocument(doc, { preview: false });
+	}));
 }
 
 // this method is called when your extension is deactivated
@@ -101,17 +102,26 @@ function getApiKey() : string
 	return vscode.workspace.getConfiguration('unitycloudbuild-viewer')?.get("apiKey") ?? "";
 }
 
-async function readProjects(client: CloudBuildClient) {
-    const res = await client.listProjectsForUser();
-    //const res = await client.getBuilds({orgid: "psychicvrlab", projectid: "styly-vr-auto-build", buildtargetid: "_all"});
-    console.log('projects', res.data);
+function createTreeView(buildTreeDataProvider: BuildTreeDataProvider, buildDetailProvider: BuildDetailContentProvider): vscode.TreeView<BuildTreeItem | NoBuildsTreeItem> {
+	const treeView = vscode.window.createTreeView(
+		'cloudbuildexplorer',
+		{treeDataProvider: buildTreeDataProvider}
+	);
+	treeView.onDidChangeSelection( async (e) => {
+		const treeItem = e.selection[0];
+		if (!(treeItem instanceof BuildTreeItem)) {
+			return;
+		}
+		const buildTreeItem = treeItem as BuildTreeItem;
+		buildDetailProvider.setCurrentBuild(buildTreeItem.buildInfo);
+		let uri = vscode.Uri.parse(cloudBuildDetailScheme + ":/Cloud Build Detail");
+		let doc = await vscode.workspace.openTextDocument(uri);
+		await vscode.window.showTextDocument(doc, { preview: false });
+	});
+	return treeView;
 }
 
-/*
-async function readBuilds(client: CloudBuildClient) {
-    const res = await client.getBuilds({orgid: "psychicvrlab", projectid: "styly-vr-auto-build", buildtargetid: "_all"});
-    console.log('builds: ', res.data);
-    console.log('builds[0].links.log.href: ', res.data[0].links.log.href);
-	return cloudBuildLogUrlBase + res.data[0].links.log.href;
+function openSettings()
+{
+	vscode.commands.executeCommand('workbench.action.openSettings', "Unity Cloud Build Viewer");
 }
-*/

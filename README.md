@@ -27,3 +27,6 @@ MIT
 * Version 0.0.1
   * initial release
 
+* Version 0.0.2
+  * fix setup failure
+

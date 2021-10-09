@@ -12,7 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "unitycloudbuild-viewer" is now active!');
 
 	// setup Build Log Virtual Document
-	const logProvider = new CloudBuildLogContentProvider();
+	const logProvider = new CloudBuildLogContentProvider(() => getApiKey());
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(cloudBuildLogScheme, logProvider));
 
 	// setup Build Detail Virtual Document
@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(cloudBuildDetailScheme, buildDetailProvider));
 
 	// setup Tree View
-	const apiLoader = new ApiLoader(context, context.extensionPath + "/cloudbuildapi.json");
+	const apiLoader = new ApiLoader(() => getApiKey(), context, context.extensionPath + "/cloudbuildapi.json");
 	const buildTreeDataProvider = new BuildTreeDataProvider(apiLoader);
 	const treeView = createTreeView(buildTreeDataProvider, buildDetailProvider);
 
@@ -31,7 +31,6 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.viewTextLog', async (build: BuildTreeItem) => {
 		if (build.buildInfo.logUrl != null) {
 			let uri = build.buildInfo.getLogTextUri();
-			logProvider.setApiKey(getApiKey());
 			let doc = await vscode.workspace.openTextDocument(uri);
 			await vscode.window.showTextDocument(doc, { preview: false });
 		}
@@ -82,13 +81,11 @@ export function activate(context: vscode.ExtensionContext) {
 		  if (document.uri.scheme !== cloudBuildLogScheme) {
 			return;
 		  }
-		  logProvider.setApiKey(getApiKey());
 		  logProvider.reload(document.uri);
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('unitycloudbuilddetail.viewTextLog', async () => {
 		let uri = buildDetailProvider.currentBuild.getLogTextUri();
-		logProvider.setApiKey(getApiKey());
 		let doc = await vscode.workspace.openTextDocument(uri);
 		await vscode.window.showTextDocument(doc, { preview: false });
 	}));

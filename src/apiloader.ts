@@ -8,17 +8,39 @@ const cloudBuildLogScheme = "unitycloudbuildviewer";
 export class ApiLoader
 {
     context: vscode.ExtensionContext;
-    api: OpenAPIClientAxios;
+    definitionFilePath: string;
+	apiKeyProvider: () => string;
 
-    constructor(context: vscode.ExtensionContext, definitionFilePath: string) {
-        this.context = context
+    api: OpenAPIClientAxios;
+    currentApiKey: string;
+
+    constructor(apiKeyProvider: () => string, context: vscode.ExtensionContext, definitionFilePath: string) {
+        this.definitionFilePath = definitionFilePath;
+        this.context = context;
+        this.apiKeyProvider = apiKeyProvider;
+        this.checkApiKey();
+    }
+
+    checkApiKey() {
+        const apiKey = this.apiKeyProvider();
+        if (apiKey != this.currentApiKey) {
+            this.currentApiKey = apiKey;
+            this.recreateApi();
+        }
+    }
+
+    recreateApi() {
+        if (this.currentApiKey == "") {
+            this.api = null;
+            return;
+        }
         this.api = new OpenAPIClientAxios(
             {
-                definition: definitionFilePath,
+                definition: this.definitionFilePath,
                 axiosConfigDefaults: {
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Basic ' + this.getApiKey(),
+                        'Authorization': 'Basic ' + this.currentApiKey,
                     },
                 },
                 withServer: { url: 'https://build-api.cloud.unity3d.com/api/v1/', description: 'cloud build api server' }
@@ -26,12 +48,9 @@ export class ApiLoader
         );
     }
 
-    getApiKey(): string {
-        return vscode.workspace.getConfiguration('unitycloudbuild-viewer')?.get("apiKey") ?? "";
-    }
-
     isConfigured(): boolean {
-        if (this.getApiKey() == "") {
+        this.checkApiKey();
+        if (this.currentApiKey == "") {
             return false;
         }
         const orgId = this.context.globalState["orgId"];
@@ -44,6 +63,7 @@ export class ApiLoader
 
     async getBuilds(): Promise<BuildInfo[]>
     {
+        this.checkApiKey();
         const orgId = this.context.globalState["orgId"];
         const projectId = this.context.globalState["projectId"];
         console.log("orgId: " + orgId + " projectId: " + projectId);
@@ -58,6 +78,7 @@ export class ApiLoader
     }
 
     async readProjects() : Promise<ProjectInfo[]> {
+        this.checkApiKey();
         const client = await this.api.init<CloudBuildClient>();
         const res = await client.listProjectsForUser();
         console.log('projects', res.data);

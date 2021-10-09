@@ -9,22 +9,20 @@ function sleep(ms) {
 }
 
 export class CloudBuildLogContentProvider implements vscode.TextDocumentContentProvider {
-	apiKey: string;
+	apiKeyProvider: () => string;
 	onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
 	onDidChange = this.onDidChangeEmitter.event;
 
 	readers: { [uri: string]: CloudBuildLogContentReader } = {};
 
-	constructor() {
+	constructor(apiKeyProvider: () => string) {
+		this.apiKeyProvider = apiKeyProvider;
 		console.log("CloudBuildLogContentProvider constructor");
 	}
 
-	setApiKey(apiKey: string) {
-		this.apiKey = apiKey;
-	}
-
 	provideTextDocumentContent(uri: vscode.Uri): string {
-		if (this.apiKey === null || this.apiKey == "") {
+		const apiKey = this.apiKeyProvider();
+		if (apiKey === null || apiKey == "") {
 			return "[Please set the apiKey setting in UnityCloudBuild-Viewer category]";
 		}
 		console.log("provideTextDocumentContent");
@@ -41,7 +39,7 @@ export class CloudBuildLogContentProvider implements vscode.TextDocumentContentP
 			reader = this.readers[uriString];
 		}
 		else {
-			reader = new CloudBuildLogContentReader(this.apiKey, uri, this.onDidChangeEmitter);
+			reader = new CloudBuildLogContentReader(this.apiKeyProvider(), uri, this.onDidChangeEmitter);
 			this.readers[uriString] = reader;
 		}
 		return reader;
@@ -59,6 +57,9 @@ export class CloudBuildLogContentProvider implements vscode.TextDocumentContentP
 	}
 }
 
+// read log content with streaming (because the load is slow.)
+// also it displays about the possibility of loading the entire log to the end.
+// because sometimes the loading stops in the middle of the log by serverside reason.
 export class CloudBuildLogContentReader {
 	apiKey: string;
 	uri: vscode.Uri;

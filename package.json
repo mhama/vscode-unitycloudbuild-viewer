@@ -86,7 +86,7 @@
     "viewsWelcome": [
       {
         "view": "cloudbuildexplorer",
-        "contents": "UnityCloudBuild Viewer may not setup correctly.\n[Setup](command:unitycloudbuild-viewer.setup)"
+        "contents": "UnityCloudBuild Viewer may not be setup correctly.\n[Setup](command:unitycloudbuild-viewer.setup)"
       }
     ],
     "configuration": {

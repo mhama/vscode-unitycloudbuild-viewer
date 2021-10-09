@@ -55,9 +55,9 @@ export class CloudBuildLogContentReader {
 	getHeaderText() {
 		var header: string;
 		if (this.loadEnd) {
-			header = "[Load finished from: " + this.uri.path + "]";
+			header = "[Load finished from: " + this.getDownloadUrl() + "]";
 		} else {
-			header = "[Reading URI: " + this.uri.path + "]";
+			header = "[Reading URI: " + this.getDownloadUrl() + "]";
 		}
 		if (this.moreDataExist) {
 			header += "\n[WARNING: Not all data will be loaded this time.]"
@@ -83,9 +83,19 @@ export class CloudBuildLogContentReader {
 		return footer;
 	}
 
+	// strip the last part of path component.
+	// because the last part is just for tab label name.
+	getDownloadUrl() : string {
+		var path = this.uri.path;
+		const pos = path.lastIndexOf("/");
+		return path.substring(0, pos);
+	}
+
 	async readFileStreaming(uri: vscode.Uri) {
 		try {
-			var response = await axios.get(uri.path, {
+			const url = this.getDownloadUrl();
+			console.log("log download url:" + url);
+			var response = await axios.get(url, {
 				responseType: 'stream',
 				headers: {
 					'Authorization': 'Basic ' + this.apiKey

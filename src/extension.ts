@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	vscode.commands.registerCommand('cloudbuildexplorer.viewTextLog', async (build: BuildTreeItem) => {
 		if (build.buildInfo.logUrl != null) {
-			let uri = vscode.Uri.parse(cloudBuildLogScheme + ":" + build.buildInfo.logUrl);
+			let uri = vscode.Uri.parse(cloudBuildLogScheme + ":" + build.buildInfo.logUrl + "/" + build.buildInfo.buildTargetId + "-" + build.buildInfo.build);
 			logProvider.setApiKey(getApiKey());
 			let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
 			await vscode.window.showTextDocument(doc, { preview: false });

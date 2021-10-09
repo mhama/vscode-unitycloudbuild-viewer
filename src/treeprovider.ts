@@ -90,13 +90,14 @@ export class ApiLoader
 class BuildInfo
 {
     build?: number;
-    buildtargetId?: string;
+    buildTargetId?: string;
     buildTargetName?: string;
     logUrl?: string;
 
     constructor(build: any) {
+        console.log("creating BuildInfo.", build);
         this.build = build.build;
-        this.buildtargetId = build.buildTargetId;
+        this.buildTargetId = build.buildtargetid;
         this.buildTargetName = build.buildTargetName;
         const logLink = build.links?.log?.href;
         this.logUrl = (logLink != null) ? (cloudBuildLogUrlBase + logLink) : "";

@@ -11,7 +11,8 @@
   ],
   "activationEvents": [
     "onCommand:unitycloudbuild-viewer.helloWorld",
-    "onCommand:unitycloudbuild-viewer.listBuilds"
+    "onCommand:unitycloudbuild-viewer.listBuilds",
+    "onView:cloudbuildexplorer"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -28,6 +29,15 @@
         "command": "unitycloudbuild-viewer.reload",
         "title": "Reload (unstable)",
         "icon____": "$(refresh)"
+      },
+      {
+        "command": "cloudbuildexplorer.refreshEntry",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cloudbuildexplorer.viewTextLog",
+        "title": "View Text Log"
       }
     ],
     "menus": {
@@ -36,6 +46,27 @@
           "command": "unitycloudbuild-viewer.reload",
           "group": "navigation",
           "when": "resourceScheme == unitycloudbuildviewer"
+        }
+      ],
+      "view/title": [
+        {
+            "command": "cloudbuildexplorer.refreshEntry",
+            "group": "navigation",
+            "when": "view == cloudbuildexplorer"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cloudbuildexplorer.viewTextLog",
+          "when": "view == cloudbuildexplorer && viewItem == builditem"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "cloudbuildexplorer",
+          "name": "Cloud Build Explorer"
         }
       ]
     },

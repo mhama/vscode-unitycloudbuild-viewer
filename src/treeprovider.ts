@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { ApiLoader, BuildInfo } from './apiloader';
+import { ApiLoader, BuildInfo, BuildTargetInfo } from './apiloader';
 
-export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeItem | NoBuildsTreeItem> {
+export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeItem | HeaderTreeItem> {
     apiLoader: ApiLoader;
     private onDidChangeTreeDataEmitter: vscode.EventEmitter<BuildTreeItem | undefined | null | void> = new vscode.EventEmitter<BuildTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<BuildTreeItem | undefined | null | void> = this.onDidChangeTreeDataEmitter.event;
+    buildTargetFilter?: BuildTargetInfo;
 
     constructor(apiLoader: ApiLoader) {
         this.apiLoader = apiLoader;
@@ -14,11 +15,36 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         this.onDidChangeTreeDataEmitter.fire();
     }
 
-    getTreeItem(element: (BuildTreeItem|NoBuildsTreeItem)): vscode.TreeItem {
+    filterByConfig(buildTarget?: BuildTargetInfo): void
+    {
+        this.buildTargetFilter = buildTarget;
+    }
+
+    buildTargetIdForFilter(): string
+    {
+        if (this.buildTargetFilter == null) {
+            return null;
+        }
+        return this.buildTargetFilter.buildTargetId;
+    }
+
+    currentFilterText(): string
+    {
+        if (this.buildTargetFilter == null) {
+            return null;
+        }
+        return this.buildTargetFilter.name;
+    }
+
+    resetFilter(): void {
+        this.buildTargetFilter = null;
+    }
+
+    getTreeItem(element: (BuildTreeItem|HeaderTreeItem)): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: (BuildTreeItem|NoBuildsTreeItem)): Thenable<(BuildTreeItem|NoBuildsTreeItem)[]> {
+    getChildren(element?: (BuildTreeItem|HeaderTreeItem)): Thenable<(BuildTreeItem|HeaderTreeItem)[]> {
         if (element) {
             return Promise.resolve([]);
         } else {
@@ -26,26 +52,31 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         }
     }
 
-    getRootItems(): Thenable<(BuildTreeItem|NoBuildsTreeItem)[]>
+    getRootItems(): Thenable<(BuildTreeItem|HeaderTreeItem)[]>
     { 
         if (!this.apiLoader.isConfigured()) {
             return Promise.resolve([]);
         }
         return new Promise((resolve, reject) => {
-            this.LoadBuilds(resolve, reject);
+            this.FetchBuildItems(resolve, reject);
         });
     }
 
-    async LoadBuilds(resolve: (value: (BuildTreeItem|NoBuildsTreeItem)[]) => void, reject) {
+    async FetchBuildItems(resolve: (value: (BuildTreeItem|HeaderTreeItem)[]) => void, reject) {
         try {
-            const builds = await this.apiLoader.getBuilds();
+            const builds = await this.apiLoader.getBuilds(this.buildTargetIdForFilter());
             if (builds != null) {
                 if (builds.length > 0) {
-                const buildItems = builds.map(i => new BuildTreeItem(i));
-                resolve(buildItems);
+                    const buildItems = builds.map(i => new BuildTreeItem(i));
+                    if (this.buildTargetIdForFilter() != null) {
+                        // 結果がフィルタされている場合はヘッダ表示を追加
+                        resolve([new HeaderTreeItem(`<< Filter: ${this.currentFilterText()} >>`, "filter"), ...buildItems]);
+                    } else {
+                        resolve(buildItems);
+                    }
                 }
                 else {
-                    resolve([new NoBuildsTreeItem()]);
+                    resolve([new HeaderTreeItem("No builds found", null)]);
                 }
             }
             else {
@@ -72,9 +103,10 @@ export class BuildTreeItem extends vscode.TreeItem {
 }
 
 // no item for builds
-export class NoBuildsTreeItem extends vscode.TreeItem {
-    constructor(
+export class HeaderTreeItem extends vscode.TreeItem {
+    constructor(label: string, contextValue: string
     ) {
-        super("No builds found", vscode.TreeItemCollapsibleState.None);
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.contextValue = contextValue;
     }
 }

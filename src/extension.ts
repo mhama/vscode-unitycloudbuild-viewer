@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { CloudBuildLogContentProvider } from './logprovider';
-import { BuildTreeDataProvider, BuildTreeItem, NoBuildsTreeItem } from './treeprovider';
-import { ApiLoader, ProjectInfo } from './apiloader';
+import { BuildTreeDataProvider, BuildTreeItem, HeaderTreeItem } from './treeprovider';
+import { ApiLoader, BuildTargetInfo, ProjectInfo } from './apiloader';
 import { BuildDetailContentProvider } from './builddetailprovider';
 
 const cloudBuildLogScheme = "unitycloudbuildviewer";
@@ -27,6 +27,16 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.refreshEntry', () =>
 		buildTreeDataProvider.refresh()
 	));
+
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.clearFilter', () => {
+		buildTreeDataProvider.resetFilter();
+		buildTreeDataProvider.refresh();
+	}));
+
+
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.filterBuilds', async () => {
+		processBuildFilter(apiLoader, buildTreeDataProvider);
+	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.viewTextLog', async (build: BuildTreeItem) => {
 		if (build.buildInfo.logUrl != null) {
@@ -115,7 +125,7 @@ function getApiKey() : string
 	return vscode.workspace.getConfiguration('unitycloudbuild-viewer')?.get("apiKey") ?? "";
 }
 
-function createTreeView(buildTreeDataProvider: BuildTreeDataProvider, buildDetailProvider: BuildDetailContentProvider): vscode.TreeView<BuildTreeItem | NoBuildsTreeItem> {
+function createTreeView(buildTreeDataProvider: BuildTreeDataProvider, buildDetailProvider: BuildDetailContentProvider): vscode.TreeView<BuildTreeItem | HeaderTreeItem> {
 	const treeView = vscode.window.createTreeView(
 		'cloudbuildexplorer',
 		{treeDataProvider: buildTreeDataProvider}
@@ -137,4 +147,53 @@ function createTreeView(buildTreeDataProvider: BuildTreeDataProvider, buildDetai
 function openSettings()
 {
 	vscode.commands.executeCommand('workbench.action.openSettings', "Unity Cloud Build Viewer");
+}
+
+// show configs selector and apply filter to tree view
+async function processBuildFilter(apiLoader: ApiLoader, buildTreeDataProvider: BuildTreeDataProvider)
+{
+	const buildTargets = await getBuildTargetsWithProgress(apiLoader);
+	const sortedBuildTargets = buildTargets.sort((a,b) =>  (a.name > b.name ? 1 : -1));
+	const pickItems = sortedBuildTargets.map(i => {
+		return new class implements vscode.QuickPickItem {
+			label: string;
+			buildTarget: BuildTargetInfo;
+			constructor() {
+				this.label = i.name;
+				this.buildTarget = i;
+			}
+		}
+	});
+	const options = new class implements vscode.QuickPickOptions {
+		canPickMany: boolean;
+		title: string;
+		placeHolder: string;
+		constructor() {
+			this.canPickMany = false;
+			this.title = "Please select a config to filter builds.";
+			this.placeHolder = "FIlter by config name...";
+		}
+	};
+	const selected = await vscode.window.showQuickPick(pickItems, options);
+	if (selected == null) {
+		return;
+	}
+	buildTreeDataProvider.filterByConfig(selected.buildTarget);
+	buildTreeDataProvider.refresh();
+	vscode.window.showInformationMessage('picked filter:' + selected.label);
+}
+
+async function getBuildTargetsWithProgress(apiLoader: ApiLoader): Promise<BuildTargetInfo[]>
+{
+	return await vscode.window.withProgress<BuildTargetInfo[]>({
+		location: vscode.ProgressLocation.Notification,
+		cancellable: false,
+		title: 'Loading CloudBuild configs...'
+	}, async (progress) => {
+		let buildTargetInfo: BuildTargetInfo[];
+		progress.report({ increment: 0 });
+		buildTargetInfo = await apiLoader.getBuildTargets();
+		progress.report({ increment: 100 });
+		return buildTargetInfo;
+	});
 }

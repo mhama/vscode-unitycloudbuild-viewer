@@ -36,12 +36,21 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "cloudbuildexplorer.filterBuilds",
+        "title": "Filter",
+        "icon": "$(filter)"
+      },
+      {
         "command": "cloudbuildexplorer.viewTextLog",
         "title": "View Text Log"
       },
       {
         "command": "cloudbuildexplorer.buildAgain",
         "title": "Build Again"
+      },
+      {
+        "command": "cloudbuildexplorer.clearFilter",
+        "title": "Clear Filter"
       },
       {
         "command": "cloudbuildexplorer.openBuildDetails",
@@ -70,6 +79,11 @@
           "command": "cloudbuildexplorer.refreshEntry",
           "group": "navigation",
           "when": "view == cloudbuildexplorer"
+        },
+        {
+          "command": "cloudbuildexplorer.filterBuilds",
+          "group": "navigation",
+          "when": "view == cloudbuildexplorer"
         }
       ],
       "view/item/context": [
@@ -80,6 +94,10 @@
         {
           "command": "cloudbuildexplorer.buildAgain",
           "when": "view == cloudbuildexplorer && viewItem == builditem"
+        },
+        {
+          "command": "cloudbuildexplorer.clearFilter",
+          "when": "view == cloudbuildexplorer && viewItem == filter"
         }
       ]
     },

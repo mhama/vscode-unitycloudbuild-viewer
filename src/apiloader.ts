@@ -71,12 +71,12 @@ export class ApiLoader
         return true;
     }
 
-    async getBuilds(): Promise<BuildInfo[]>
+    async getBuilds(buildTargetId?: string): Promise<BuildInfo[]>
     {
         this.checkApiKey();
         const orgAndProject = this.getOrgAndProjectParams();
         const client = await this.api.init<CloudBuildClient>();
-        const res = await client.getBuilds({...orgAndProject, buildtargetid: "_all", per_page: 30});
+        const res = await client.getBuilds({...orgAndProject, buildtargetid: (buildTargetId ?? "_all"), per_page: 30});
         const builds = res.data;
         const buildInfos = builds.map(i => new BuildInfo(i));
         return buildInfos;
@@ -95,9 +95,18 @@ export class ApiLoader
         const orgAndProject = this.getOrgAndProjectParams();
         const client = await this.api.init<CloudBuildClient>();
         const res = await client.startBuilds({...orgAndProject, buildtargetid: buildTargetId})
-        console.log('build result:', res.data);
-        console.log('build status:', res.data[0].buildStatus);
+        console.log('startBuild result:', res.data);
+        console.log('startBuild status:', res.data[0].buildStatus);
         return res.data[0];
+    }
+
+    async getBuildTargets() : Promise<BuildTargetInfo[]> {
+        this.checkApiKey();
+        const orgAndProject = this.getOrgAndProjectParams();
+        const client = await this.api.init<CloudBuildClient>();
+        const res = await client.getBuildTargets({...orgAndProject})
+        console.log('getBuildTargets result:', res.data);
+        return res.data.map(p => new BuildTargetInfo(p));
     }
 }
 
@@ -126,10 +135,10 @@ export class BuildInfo
     buildTargetName?: string;
     logUrl?: string;
     downloadUrl?: string;
-    detailText: string;
     buildStatus: string;
-    commitId: string;
-    scmBranch: string;
+    commitId?: string;
+    scmBranch?: string;
+    detailText: string;
 
     constructor(build: any) {
         console.log("creating BuildInfo.", build);
@@ -151,3 +160,18 @@ export class BuildInfo
     }
 }
 
+export class BuildTargetInfo
+{
+    buildTargetId: string;
+    name: string;
+    platform?: string;
+    detailText: string;
+
+    constructor(buildtarget: any) {
+        console.log("creating BuildTargetInfo.", buildtarget);
+        this.buildTargetId = buildtarget.buildtargetid;
+        this.name = buildtarget.name;
+        this.platform = buildtarget.platform;
+        this.detailText = JSON.stringify(buildtarget, null, 2);
+    }
+}

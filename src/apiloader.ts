@@ -29,6 +29,16 @@ export class ApiLoader
         }
     }
 
+    getOrgAndProjectParams() : {[name: string] :string} {
+        const orgId = this.context.globalState["orgId"];
+        const projectId = this.context.globalState["projectId"];
+        console.log("orgId: " + orgId + " projectId: " + projectId);
+        if (orgId == null || projectId == null) {
+            throw new Error("UnityCloudBuild Viewer Not configured correctly. Please run setup.");
+        }
+        return {orgid: orgId, projectid: projectId};
+    }
+
     recreateApi() {
         if (this.currentApiKey == "") {
             this.api = null;
@@ -64,14 +74,9 @@ export class ApiLoader
     async getBuilds(): Promise<BuildInfo[]>
     {
         this.checkApiKey();
-        const orgId = this.context.globalState["orgId"];
-        const projectId = this.context.globalState["projectId"];
-        console.log("orgId: " + orgId + " projectId: " + projectId);
-        if (orgId == null || projectId == null) {
-            throw new Error("UnityCloudBuild Viewer Not configured correctly. Please run setup.");
-        }
+        const orgAndProject = this.getOrgAndProjectParams();
         const client = await this.api.init<CloudBuildClient>();
-        const res = await client.getBuilds({orgid: orgId, projectid: projectId, buildtargetid: "_all", per_page: 30});
+        const res = await client.getBuilds({...orgAndProject, buildtargetid: "_all", per_page: 30});
         const builds = res.data;
         const buildInfos = builds.map(i => new BuildInfo(i));
         return buildInfos;
@@ -84,6 +89,16 @@ export class ApiLoader
         console.log('projects', res.data);
         return res.data.map(p => new ProjectInfo(p));
     }
+
+    async startBuild(buildTargetId: string) {
+        this.checkApiKey();
+        const orgAndProject = this.getOrgAndProjectParams();
+        const client = await this.api.init<CloudBuildClient>();
+        const res = await client.startBuilds({...orgAndProject, buildtargetid: buildTargetId})
+        console.log('build result:', res.data);
+        console.log('build status:', res.data[0].buildStatus);
+        return res.data[0];
+    }
 }
 
 export class ProjectInfo
@@ -93,6 +108,7 @@ export class ProjectInfo
     orgName: string;
     orgId: string;
     projectDetail: any;
+    
     constructor(project: any) {
         this.name = project.name;
         this.projectId = project.projectid;
@@ -112,6 +128,7 @@ export class BuildInfo
     downloadUrl?: string;
     detailText: string;
     buildStatus: string;
+    commitId: string;
 
     constructor(build: any) {
         console.log("creating BuildInfo.", build);
@@ -122,6 +139,7 @@ export class BuildInfo
         this.downloadUrl = build.links?.download_primary?.href ?? "";
         this.logUrl = (logLink != null) ? (cloudBuildLogUrlBase + logLink) : "";
         this.buildStatus = build.buildStatus;
+        this.commitId = build.lastBuiltRevision;
         this.detailText = JSON.stringify(build, null, 2);
     }
 

@@ -26,13 +26,29 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.refreshEntry', () =>
 		buildTreeDataProvider.refresh()
-  	));
+	));
 
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.viewTextLog', async (build: BuildTreeItem) => {
 		if (build.buildInfo.logUrl != null) {
 			let uri = build.buildInfo.getLogTextUri();
 			let doc = await vscode.workspace.openTextDocument(uri);
 			await vscode.window.showTextDocument(doc, { preview: false });
+		}
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.buildAgain', async (build: BuildTreeItem) => {
+		try {
+			var result = await apiLoader.startBuild(build.buildInfo.buildTargetId);
+			if (result.error == null) {
+				buildTreeDataProvider.refresh();
+			}
+			else
+			{
+				vscode.window.showErrorMessage(`Failed building '${build.buildInfo.buildTargetId}'. error: ${result.error}`);
+			}
+		}
+		catch(e) {
+			vscode.window.showErrorMessage(`Failed building '${build.buildInfo.buildTargetId}'. error: ${e}`);
 		}
 	}));
 

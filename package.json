@@ -40,6 +40,10 @@
         "title": "View Text Log"
       },
       {
+        "command": "cloudbuildexplorer.buildAgain",
+        "title": "Build Again"
+      },
+      {
         "command": "cloudbuildexplorer.openBuildDetails",
         "title": "Open Build Details"
       },
@@ -71,6 +75,10 @@
       "view/item/context": [
         {
           "command": "cloudbuildexplorer.viewTextLog",
+          "when": "view == cloudbuildexplorer && viewItem == builditem"
+        },
+        {
+          "command": "cloudbuildexplorer.buildAgain",
           "when": "view == cloudbuildexplorer && viewItem == builditem"
         }
       ]

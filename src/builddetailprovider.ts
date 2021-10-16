@@ -16,6 +16,7 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		return "Name: " + "`" + this.getBuildName() + "`" + "\n" + 
 		"Status: " + this.currentBuild.buildStatus + "\n" +
 		"Download: " + this.currentBuild.downloadUrl + "\n" +
+		"Commit Id: " + this.currentBuild.commitId + "\n" +
 		"Detail: " + this.currentBuild.detailText + "\n";
 	}
 

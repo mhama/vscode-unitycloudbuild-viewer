@@ -108,7 +108,7 @@ export class ProjectInfo
     orgName: string;
     orgId: string;
     projectDetail: any;
-    
+
     constructor(project: any) {
         this.name = project.name;
         this.projectId = project.projectid;
@@ -129,6 +129,7 @@ export class BuildInfo
     detailText: string;
     buildStatus: string;
     commitId: string;
+    scmBranch: string;
 
     constructor(build: any) {
         console.log("creating BuildInfo.", build);
@@ -140,6 +141,7 @@ export class BuildInfo
         this.logUrl = (logLink != null) ? (cloudBuildLogUrlBase + logLink) : "";
         this.buildStatus = build.buildStatus;
         this.commitId = build.lastBuiltRevision;
+        this.scmBranch = build.scmBranch;
         this.detailText = JSON.stringify(build, null, 2);
     }
 

@@ -30,3 +30,8 @@ MIT
 * Version 0.0.2
   * fix setup failure
 
+* Version 0.0.3
+  * added 'build again'
+  * implemented build filter
+  * added branch and commit info on build detail view
+

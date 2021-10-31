@@ -17,3 +17,6 @@
 
 * Version 0.0.5
   * fix paging of builds
+
+* Version 0.0.6
+  * fix bug at persisting project values

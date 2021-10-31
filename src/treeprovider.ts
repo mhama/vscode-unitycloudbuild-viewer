@@ -148,7 +148,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
 
     // 次ページ取得
     async FetchAllBuildPageAsync(page: number, itemsPerPage: number) : Promise<(BuildTreeItem|HeaderTreeItem)[]> {
-        const allBuilds = await this.apiLoader.getBuilds(null, null, page + 1, itemsPerPage);
+        const allBuilds = await this.apiLoader.getBuilds(null, null, page, itemsPerPage);
         if (allBuilds == null) {
             throw new Error("getBuilds return null.");
         }

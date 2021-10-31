@@ -91,9 +91,8 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage('Setup of UnityCloudBuildViewer canceled.');
 			return;
 		}
-		context.globalState["projectId"] = result.project.projectId;
-		context.globalState["orgId"] = result.project.orgId;
-		context.globalState.setKeysForSync(["projectId", "orgId"]);
+		await context.globalState.update("projectId", result.project.projectId);
+		await context.globalState.update("orgId", result.project.orgId);
 		buildTreeDataProvider.reload();
 		//vscode.commands.executeCommand("onView:cloudbuildexplorer");
 		vscode.window.showInformationMessage('Setup of UnityCloudBuildViewer completed!');

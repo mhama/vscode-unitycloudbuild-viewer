@@ -30,8 +30,8 @@ export class ApiLoader
     }
 
     getOrgAndProjectParams() : {[name: string] :string} {
-        const orgId = this.context.globalState["orgId"];
-        const projectId = this.context.globalState["projectId"];
+        const orgId: string = this.context.globalState.get("orgId");
+        const projectId: string = this.context.globalState.get("projectId");
         console.log("orgId: " + orgId + " projectId: " + projectId);
         if (orgId == null || projectId == null) {
             throw new Error("UnityCloudBuild Viewer Not configured correctly. Please run setup.");
@@ -63,8 +63,8 @@ export class ApiLoader
         if (this.currentApiKey == "") {
             return false;
         }
-        const orgId = this.context.globalState["orgId"];
-        const projectId = this.context.globalState["projectId"];
+        const orgId: string = this.context.globalState.get("orgId");
+        const projectId: string = this.context.globalState.get("projectId");
         if (orgId == null || projectId == null) {
             return false;
         }

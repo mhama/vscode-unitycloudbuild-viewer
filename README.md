@@ -20,18 +20,3 @@ Then, `Unity Cloud Build` explorer view will work and it will show the latest bu
 # License
 
 MIT
-
-
-## Release Notes
-
-* Version 0.0.1
-  * initial release
-
-* Version 0.0.2
-  * fix setup failure
-
-* Version 0.0.3
-  * added 'build again'
-  * implemented build filter
-  * added branch and commit info on build detail view
-

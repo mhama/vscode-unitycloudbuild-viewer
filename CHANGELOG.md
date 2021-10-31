@@ -1,9 +1,17 @@
 # Change Log
 
-All notable changes to the "unitycloudbuild-viewer" extension will be documented in this file.
+* Version 0.0.1
+  * initial release
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+* Version 0.0.2
+  * fix setup failure
 
-## [Unreleased]
+* Version 0.0.3
+  * added 'build again'
+  * implemented build filter
+  * added branch and commit info on build detail view
 
-- Initial release
+* Version 0.0.4
+  * added "Reload Log" and "View Text Log" context menu items.
+  * show old running builds at the top of the list.
+  * show more pages of builds.

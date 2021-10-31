@@ -14,4 +14,6 @@
 * Version 0.0.4
   * added "Reload Log" and "View Text Log" context menu items.
   * show old running builds at the top of the list.
-  * show more pages of builds.
+
+* Version 0.0.5
+  * fix paging of builds

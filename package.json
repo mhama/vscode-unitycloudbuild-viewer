@@ -28,7 +28,7 @@
       },
       {
         "command": "unitycloudbuild-viewer.reload",
-        "title": "Reload"
+        "title": "Reload Log"
       },
       {
         "command": "cloudbuildexplorer.refreshEntry",
@@ -84,6 +84,18 @@
           "command": "cloudbuildexplorer.filterBuilds",
           "group": "navigation",
           "when": "view == cloudbuildexplorer"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "unitycloudbuild-viewer.reload",
+          "group": "navigation",
+          "when": "resourceScheme == unitycloudbuildviewer"
+        },
+        {
+          "command": "unitycloudbuilddetail.viewTextLog",
+          "group": "navigation",
+          "when": "resourceScheme == unitycloudbuilddetail"
         }
       ],
       "view/item/context": [

@@ -25,12 +25,12 @@ export function activate(context: vscode.ExtensionContext) {
 	const treeView = createTreeView(buildTreeDataProvider, buildDetailProvider);
 
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.refreshEntry', () =>
-		buildTreeDataProvider.refresh()
+		buildTreeDataProvider.reload()
 	));
 
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.clearFilter', () => {
 		buildTreeDataProvider.resetFilter();
-		buildTreeDataProvider.refresh();
+		buildTreeDataProvider.reload();
 	}));
 
 
@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
 		try {
 			var result = await apiLoader.startBuild(build.buildInfo.buildTargetId);
 			if (result.error == null) {
-				buildTreeDataProvider.refresh();
+				buildTreeDataProvider.reload();
 			}
 			else
 			{
@@ -94,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
 		context.globalState["projectId"] = result.project.projectId;
 		context.globalState["orgId"] = result.project.orgId;
 		context.globalState.setKeysForSync(["projectId", "orgId"]);
-		buildTreeDataProvider.refresh();
+		buildTreeDataProvider.reload();
 		//vscode.commands.executeCommand("onView:cloudbuildexplorer");
 		vscode.window.showInformationMessage('Setup of UnityCloudBuildViewer completed!');
 	}));
@@ -179,7 +179,7 @@ async function processBuildFilter(apiLoader: ApiLoader, buildTreeDataProvider: B
 		return;
 	}
 	buildTreeDataProvider.filterByConfig(selected.buildTarget);
-	buildTreeDataProvider.refresh();
+	buildTreeDataProvider.reload();
 	vscode.window.showInformationMessage('picked filter:' + selected.label);
 }
 

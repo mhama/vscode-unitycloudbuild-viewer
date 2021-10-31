@@ -71,12 +71,16 @@ export class ApiLoader
         return true;
     }
 
-    async getBuilds(buildTargetId?: string): Promise<BuildInfo[]>
+    async getBuilds(buildTargetId?: string, buildStatus?: string, page?: number, perPage?: number): Promise<BuildInfo[]>
     {
         this.checkApiKey();
         const orgAndProject = this.getOrgAndProjectParams();
         const client = await this.api.init<CloudBuildClient>();
-        const res = await client.getBuilds({...orgAndProject, buildtargetid: (buildTargetId ?? "_all"), per_page: 30});
+        const res = await client.getBuilds({...orgAndProject, 
+            buildtargetid: (buildTargetId ?? "_all"), 
+            buildStatus: buildStatus,
+            page: page ?? 1,
+            per_page: perPage ?? 30});
         const builds = res.data;
         const buildInfos = builds.map(i => new BuildInfo(i));
         return buildInfos;

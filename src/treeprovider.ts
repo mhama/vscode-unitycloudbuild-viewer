@@ -2,12 +2,14 @@ import { hasUncaughtExceptionCaptureCallback } from 'process';
 import * as vscode from 'vscode';
 import { ApiLoader, BuildInfo, BuildTargetInfo } from './apiloader';
 
-export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeItem | HeaderTreeItem> {
+type TreeItem = BuildTreeItem | HeaderTreeItem;
+
+export class BuildTreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
     apiLoader: ApiLoader;
     private onDidChangeTreeDataEmitter: vscode.EventEmitter<BuildTreeItem | undefined | null | void> = new vscode.EventEmitter<BuildTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<BuildTreeItem | undefined | null | void> = this.onDidChangeTreeDataEmitter.event;
     buildTargetFilter?: BuildTargetInfo;
-    treeItems?: (BuildTreeItem | HeaderTreeItem)[];
+    treeItems?: TreeItem[];
 
     itemsPerPage: number = 20;
     maxPages: number = 5;
@@ -53,11 +55,11 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         this.buildTargetFilter = null;
     }
 
-    getTreeItem(element: (BuildTreeItem|HeaderTreeItem)): vscode.TreeItem {
+    getTreeItem(element: TreeItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: (BuildTreeItem|HeaderTreeItem)): Thenable<(BuildTreeItem|HeaderTreeItem)[]> {
+    getChildren(element?: TreeItem): Thenable<TreeItem[]> {
         if (element) {
             return Promise.resolve([]);
         } else {
@@ -65,7 +67,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         }
     }
 
-    getRootItems(): Thenable<(BuildTreeItem|HeaderTreeItem)[]>
+    getRootItems(): Thenable<TreeItem[]>
     { 
         if (!this.apiLoader.isConfigured()) {
             return Promise.resolve([]);
@@ -79,7 +81,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
     // ロード済みの場合はそのまま返す。
     // コンテンツ未ロードの場合はサーバーから取得して１ページ目を返す。
     // １ページ目をロードしたとき、２ページ目以降のロードも仕掛けて、ロードされ次第再描画する。
-    async FetchRootItems(resolve: (value: (BuildTreeItem|HeaderTreeItem)[]) => void, reject) {
+    async FetchRootItems(resolve: (value: TreeItem[]) => void, reject) {
         if (this.treeItems != null) {
             resolve(this.treeItems);
             return;
@@ -91,7 +93,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
                 resolve(builds);
             }
             else {
-                const onPage: ((loadId: number, page: number, builds: (BuildTreeItem|HeaderTreeItem)[]) => void) = (loadId, page, builds) => {
+                const onPage: ((loadId: number, page: number, builds: TreeItem[]) => void) = (loadId, page, builds) => {
                     // 古い指示に対する結果は不要のため破棄する
                     if (loadId != this.loadId) {
                         return;
@@ -118,7 +120,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
     // 全ビルドの１ページ目取得に加え、実行中のビルド (buildStatus = started) も平行して取得し、必ず表示する。
     // 長時間実行中のビルドが１ページ目に入らないことがあることの対策。
     async FetchAllBuildItems(loadId: number, itemsPerPage: number)
-        : Promise<(BuildTreeItem|HeaderTreeItem)[]>
+        : Promise<TreeItem[]>
     {
         const [allBuilds, startedBuilds] = await Promise.all([this.apiLoader.getBuilds(null, null, 1, itemsPerPage), this.apiLoader.getBuilds(null, "started")]);
         if (allBuilds == null || startedBuilds == null) {
@@ -136,7 +138,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
 
     // ２ページ目以降をロードする
     // ロードが進むたびにonPageが呼ばれる
-    async FetchAllBuildPagesAsync(loadId: number, page: number, itemsPerPage: number, onPage: (loadId: number, page: number, builds: (BuildTreeItem|HeaderTreeItem)[]) => void) {
+    async FetchAllBuildPagesAsync(loadId: number, page: number, itemsPerPage: number, onPage: (loadId: number, page: number, builds: TreeItem[]) => void) {
         for (var i=2 ; i<=this.maxPages ; i++) {
             const builds = await this.FetchAllBuildPageAsync(i, itemsPerPage);
             onPage(loadId, page, builds);
@@ -147,7 +149,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
     }
 
     // 次ページ取得
-    async FetchAllBuildPageAsync(page: number, itemsPerPage: number) : Promise<(BuildTreeItem|HeaderTreeItem)[]> {
+    async FetchAllBuildPageAsync(page: number, itemsPerPage: number) : Promise<TreeItem[]> {
         const allBuilds = await this.apiLoader.getBuilds(null, null, page, itemsPerPage);
         if (allBuilds == null) {
             throw new Error("getBuilds return null.");
@@ -161,7 +163,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<BuildTreeI
         return allBuildItems;
     }
 
-    async FetchFilteredBuildItems() : Promise<(BuildTreeItem|HeaderTreeItem)[]> {
+    async FetchFilteredBuildItems() : Promise<TreeItem[]> {
         const builds = await this.apiLoader.getBuilds(this.buildTargetIdForFilter());
         if (builds != null) {
             if (builds.length > 0) {

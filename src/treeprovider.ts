@@ -87,26 +87,27 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<TreeItem> 
             return;
         }
         try {
+            const onPage: ((loadId: number, page: number, builds: TreeItem[]) => void) = (loadId, page, builds) => {
+                // 古い指示に対する結果は不要のため破棄する
+                if (loadId != this.loadId) {
+                    return;
+                }
+                if (this.treeItems != null) {
+                    this.treeItems.push(...builds);
+                    this.redraw();
+                }
+            };
+            this.loadId++;
             if (this.buildTargetIdForFilter() != null) {
                 var builds = await this.FetchFilteredBuildItems();
+                this.FetchBuildPagesAsync(this.loadId, this.buildTargetIdForFilter(), 2, this.itemsPerPage, onPage);
                 this.treeItems = builds;
                 resolve(builds);
             }
             else {
-                const onPage: ((loadId: number, page: number, builds: TreeItem[]) => void) = (loadId, page, builds) => {
-                    // 古い指示に対する結果は不要のため破棄する
-                    if (loadId != this.loadId) {
-                        return;
-                    }
-                    if (this.treeItems != null) {
-                        this.treeItems.push(...builds);
-                        this.redraw();
-                    }
-                };
-                this.loadId++;
                 var builds = await this.FetchAllBuildItems(this.loadId, this.itemsPerPage);
                 // 値の返却後も次ページをロードする（完了を待たない。onPageが順次呼ばれる）
-                this.FetchAllBuildPagesAsync(this.loadId, 2, this.itemsPerPage, onPage);
+                this.FetchBuildPagesAsync(this.loadId, null, 2, this.itemsPerPage, onPage);
                 this.treeItems = builds;
                 resolve(builds);
             }
@@ -136,33 +137,6 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<TreeItem> 
         return [...startedBuildItems, ...allBuildItems];
     }
 
-    // ２ページ目以降をロードする
-    // ロードが進むたびにonPageが呼ばれる
-    async FetchAllBuildPagesAsync(loadId: number, page: number, itemsPerPage: number, onPage: (loadId: number, page: number, builds: TreeItem[]) => void) {
-        for (var i=2 ; i<=this.maxPages ; i++) {
-            const builds = await this.FetchAllBuildPageAsync(i, itemsPerPage);
-            onPage(loadId, page, builds);
-            if (builds.length == 0) {
-                break;
-            }
-        }
-    }
-
-    // 次ページ取得
-    async FetchAllBuildPageAsync(page: number, itemsPerPage: number) : Promise<TreeItem[]> {
-        const allBuilds = await this.apiLoader.getBuilds(null, null, page, itemsPerPage);
-        if (allBuilds == null) {
-            throw new Error("getBuilds return null.");
-        }
-        if (allBuilds.length == 0) {
-            return [];
-        }
-        // startedのものは除外することで二重表示しないようにする
-        const allBuildItems = allBuilds.map(i => (i.buildStatus != "started") ? new BuildTreeItem(i) : null);
-
-        return allBuildItems;
-    }
-
     async FetchFilteredBuildItems() : Promise<TreeItem[]> {
         const builds = await this.apiLoader.getBuilds(this.buildTargetIdForFilter());
         if (builds != null) {
@@ -178,6 +152,33 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<TreeItem> 
         else {
             throw new Error("getBuilds return null.");
         }
+    }
+
+    // ２ページ目以降をロードする
+    // ロードが進むたびにonPageが呼ばれる
+    async FetchBuildPagesAsync(loadId: number, buildTargetId: string, page: number, itemsPerPage: number, onPage: (loadId: number, page: number, builds: TreeItem[]) => void) {
+        for (var i=2 ; i<=this.maxPages ; i++) {
+            const builds = await this.FetchBuildPageAsync(i, buildTargetId, itemsPerPage);
+            onPage(loadId, page, builds);
+            if (builds.length == 0) {
+                break;
+            }
+        }
+    }
+
+    // 次ページ取得
+    async FetchBuildPageAsync(page: number, buildTargetId: string, itemsPerPage: number) : Promise<TreeItem[]> {
+        const allBuilds = await this.apiLoader.getBuilds(buildTargetId, null, page, itemsPerPage);
+        if (allBuilds == null) {
+            throw new Error("getBuilds return null.");
+        }
+        if (allBuilds.length == 0) {
+            return [];
+        }
+        // startedのものは除外することで二重表示しないようにする
+        const allBuildItems = allBuilds.map(i => (i.buildStatus != "started") ? new BuildTreeItem(i) : null);
+
+        return allBuildItems;
     }
 }
 

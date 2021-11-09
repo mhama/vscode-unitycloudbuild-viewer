@@ -5,6 +5,10 @@ import { Client as CloudBuildClient, Paths } from './cloudbuildapi';
 const cloudBuildLogUrlBase = "https://build-api.cloud.unity3d.com";
 const cloudBuildLogScheme = "unitycloudbuildviewer";
 
+type GetBuildsResponseItemType = Paths.GetBuilds.Responses.$200[0];
+type GetBuildTargetsResponseItemType = Paths.GetBuildTargets.Responses.$200[0];
+type GetListProjectsForUserResponseItemType = Paths.ListProjectsForUser.Responses.$200[0];
+
 export class ApiLoader
 {
     context: vscode.ExtensionContext;
@@ -122,7 +126,7 @@ export class ProjectInfo
     orgId: string;
     projectDetail: any;
 
-    constructor(project: any) {
+    constructor(project: GetListProjectsForUserResponseItemType) {
         this.name = project.name;
         this.projectId = project.projectid;
         this.orgName = project.orgName;
@@ -143,8 +147,9 @@ export class BuildInfo
     commitId?: string;
     scmBranch?: string;
     detailText: string;
+    totalTimeInSeconds?: number;
 
-    constructor(build: any) {
+    constructor(build: GetBuildsResponseItemType) {
         console.log("creating BuildInfo.", build);
         this.build = build.build;
         this.buildTargetId = build.buildtargetid;
@@ -156,6 +161,7 @@ export class BuildInfo
         this.commitId = build.lastBuiltRevision;
         this.scmBranch = build.scmBranch;
         this.detailText = JSON.stringify(build, null, 2);
+        this.totalTimeInSeconds = build.totalTimeInSeconds;
     }
 
     getLogTextUri(): vscode.Uri {
@@ -171,7 +177,7 @@ export class BuildTargetInfo
     platform?: string;
     detailText: string;
 
-    constructor(buildtarget: any) {
+    constructor(buildtarget: GetBuildTargetsResponseItemType) {
         console.log("creating BuildTargetInfo.", buildtarget);
         this.buildTargetId = buildtarget.buildtargetid;
         this.name = buildtarget.name;

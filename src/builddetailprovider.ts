@@ -11,6 +11,13 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		console.log("CloudBuildLogContentProvider constructor");
 	}
 
+	getDurationStringFromSec(sec : number) : string {
+		if (sec == null) {
+			return "";
+		}
+		return `${Math.floor(sec / 60)}min ${Math.floor(sec) % 60}sec`;
+	}
+
 	provideTextDocumentContent(uri: vscode.Uri): string {
 		this.uri = uri;
 		return "Name: " + "`" + this.getBuildName() + "`" + "\n" + 
@@ -18,6 +25,7 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		"Download: " + this.currentBuild.downloadUrl + "\n" +
 		"Branch: " + this.currentBuild.scmBranch + "\n" +
 		"Commit Id: " + this.currentBuild.commitId + "\n" +
+		"Build Time: " + this.getDurationStringFromSec(this.currentBuild.totalTimeInSeconds) + "\n" +
 		"\n" +
 		"Detail: " + this.currentBuild.detailText + "\n";
 	}

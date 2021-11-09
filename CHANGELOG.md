@@ -20,3 +20,7 @@
 
 * Version 0.0.6
   * fix bug at persisting project values
+
+* Version 0.0.7
+  * show more pages for filtered builds
+  * add build time / current time since build start on build detail view.

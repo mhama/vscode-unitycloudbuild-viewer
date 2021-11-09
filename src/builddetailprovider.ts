@@ -25,9 +25,16 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		"Download: " + this.currentBuild.downloadUrl + "\n" +
 		"Branch: " + this.currentBuild.scmBranch + "\n" +
 		"Commit Id: " + this.currentBuild.commitId + "\n" +
-		"Build Time: " + this.getDurationStringFromSec(this.currentBuild.totalTimeInSeconds) + "\n" +
+		this.buildTimeText() + "\n" +
 		"\n" +
 		"Detail: " + this.currentBuild.detailText + "\n";
+	}
+
+	buildTimeText() : string {
+		if (this.currentBuild.buildStatus == "started") {
+			return "Building For: " + this.getDurationStringFromSec(this.currentBuild.getCurrentBuildSec());
+		}
+		return "Build Time: " + this.getDurationStringFromSec(this.currentBuild.totalTimeInSeconds);
 	}
 
 	getBuildName() {

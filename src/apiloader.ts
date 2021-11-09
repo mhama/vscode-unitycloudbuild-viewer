@@ -148,6 +148,7 @@ export class BuildInfo
     scmBranch?: string;
     detailText: string;
     totalTimeInSeconds?: number;
+    buildStartTime?: Date;
 
     constructor(build: GetBuildsResponseItemType) {
         console.log("creating BuildInfo.", build);
@@ -162,11 +163,23 @@ export class BuildInfo
         this.scmBranch = build.scmBranch;
         this.detailText = JSON.stringify(build, null, 2);
         this.totalTimeInSeconds = build.totalTimeInSeconds;
+        this.buildStartTime = (build.buildStartTime != null) ? new Date(build.buildStartTime) : null;
     }
 
     getLogTextUri(): vscode.Uri {
         const uri = vscode.Uri.parse(cloudBuildLogScheme + ":" + this.logUrl + "/" + this.buildTargetId + "-" + this.build);
         return uri;
+    }
+
+    getCurrentBuildSec(): number {
+        if (this.buildStatus != "started") {
+            return null;
+        }
+        if (this.buildStartTime == null) {
+            return null;
+        }
+        var sec = Math.floor((Date.now() - this.buildStartTime.getTime()) / 1000);
+        return sec;
     }
 }
 

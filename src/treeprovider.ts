@@ -83,6 +83,12 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<TreeItem> 
     // １ページ目をロードしたとき、２ページ目以降のロードも仕掛けて、ロードされ次第再描画する。
     async FetchRootItems(resolve: (value: TreeItem[]) => void, reject) {
         if (this.treeItems != null) {
+            // update description for time display
+            this.treeItems.forEach(i => {
+                if (i instanceof BuildTreeItem) {
+                    i.updateForCurrentTime();
+                }
+            });
             resolve(this.treeItems);
             return;
         }
@@ -192,7 +198,43 @@ export class BuildTreeItem extends vscode.TreeItem {
         super(buildInfo.buildTargetName + " #" + buildInfo.build, vscode.TreeItemCollapsibleState.None);
         this.buildInfo = buildInfo;
         this.contextValue = "builditem";
-        this.description = buildInfo.buildStatus;
+        this.updateForCurrentTime();
+    }
+
+    getBuildStatusAndDuration() : string {
+        if (this.buildInfo.buildStatus == "started") {
+            return "building for " + this.getDurationStringFromDate(this.getLastChangeDate());
+        }
+        return this.buildInfo.buildStatus + " " + this.getDurationStringFromDate(this.getLastChangeDate()) + " ago";
+    }
+
+	getDurationStringFromDate(date : Date) : string {
+		if (date == null) {
+			return "";
+		}
+        var min = Math.floor((Date.now() - date.getTime()) / (1000 * 60));
+        if (min < 60) {
+            return `${min}m`;
+        }
+        if (min < 60 * 24 * 2) {
+            return `${(min/60).toFixed()}h`;
+        }
+        return `${(min/(60 * 24)).toFixed()}d`;
+	}
+
+    getLastChangeDate(): Date {
+        switch (this.buildInfo.buildStatus) {
+            case "started":
+                return this.buildInfo.checkoutStartTime;
+            case "queued":
+            case "sentToBuilder":
+                return this.buildInfo.createdTime;
+        }
+        return this.buildInfo.finishedTime;
+    }
+
+    updateForCurrentTime() {
+        this.description = this.getBuildStatusAndDuration();
     }
 }
 

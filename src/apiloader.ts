@@ -149,6 +149,9 @@ export class BuildInfo
     detailText: string;
     totalTimeInSeconds?: number;
     buildStartTime?: Date;
+    checkoutStartTime?: Date;
+    finishedTime?: Date;
+    createdTime?: Date;
 
     constructor(build: GetBuildsResponseItemType) {
         console.log("creating BuildInfo.", build);
@@ -164,6 +167,9 @@ export class BuildInfo
         this.detailText = JSON.stringify(build, null, 2);
         this.totalTimeInSeconds = build.totalTimeInSeconds;
         this.buildStartTime = (build.buildStartTime != null) ? new Date(build.buildStartTime) : null;
+        this.checkoutStartTime = (build.checkoutStartTime != null) ? new Date(build.checkoutStartTime) : null;
+        this.finishedTime = (build.finished != null) ? new Date(build.finished) : null;
+        this.createdTime = (build.created != null) ? new Date(build.created) : null;
     }
 
     getLogTextUri(): vscode.Uri {

@@ -8,6 +8,8 @@ const cloudBuildLogScheme = "unitycloudbuildviewer";
 const cloudBuildDetailScheme = "unitycloudbuilddetail"
 //const cloudBuildLogUrlBase = "https://build-api.cloud.unity3d.com";
 
+var treeRedrawTimer: NodeJS.Timer = null;
+
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "unitycloudbuild-viewer" is now active!');
 
@@ -23,6 +25,12 @@ export function activate(context: vscode.ExtensionContext) {
 	const apiLoader = new ApiLoader(() => getApiKey(), context, context.extensionPath + "/cloudbuildapi.json");
 	const buildTreeDataProvider = new BuildTreeDataProvider(apiLoader);
 	const treeView = createTreeView(buildTreeDataProvider, buildDetailProvider);
+
+	// redraw tree view (update time information)
+	treeRedrawTimer = setInterval(() => {
+		console.log("interval redraw");
+		buildTreeDataProvider.redraw();
+	}, 30000);
 
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.refreshEntry', () =>
 		buildTreeDataProvider.reload()
@@ -117,7 +125,10 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	clearInterval(treeRedrawTimer);
+	treeRedrawTimer = null;
+}
 
 function getApiKey() : string
 {

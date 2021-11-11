@@ -181,10 +181,10 @@ export class BuildInfo
         if (this.buildStatus != "started") {
             return null;
         }
-        if (this.buildStartTime == null) {
+        if (this.checkoutStartTime == null) {
             return null;
         }
-        var sec = Math.floor((Date.now() - this.buildStartTime.getTime()) / 1000);
+        var sec = Math.floor((Date.now() - this.checkoutStartTime.getTime()) / 1000);
         return sec;
     }
 }

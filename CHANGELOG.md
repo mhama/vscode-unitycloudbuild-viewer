@@ -27,3 +27,7 @@
 
 * Version 0.0.8
   * add time display like '3h ago'
+
+* Version 0.0.9
+  * add share link on build detail page
+  * add Create Share Link command for builds

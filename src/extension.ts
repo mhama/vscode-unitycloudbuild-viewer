@@ -17,12 +17,14 @@ export function activate(context: vscode.ExtensionContext) {
 	const logProvider = new CloudBuildLogContentProvider(() => getApiKey());
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(cloudBuildLogScheme, logProvider));
 
+	// API loader
+	const apiLoader = new ApiLoader(() => getApiKey(), context, context.extensionPath + "/cloudbuildapi.json");
+
 	// setup Build Detail Virtual Document
-	const buildDetailProvider = new BuildDetailContentProvider();
+	const buildDetailProvider = new BuildDetailContentProvider(apiLoader);
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(cloudBuildDetailScheme, buildDetailProvider));
 
 	// setup Tree View
-	const apiLoader = new ApiLoader(() => getApiKey(), context, context.extensionPath + "/cloudbuildapi.json");
 	const buildTreeDataProvider = new BuildTreeDataProvider(apiLoader);
 	const treeView = createTreeView(buildTreeDataProvider, buildDetailProvider);
 
@@ -64,6 +66,21 @@ export function activate(context: vscode.ExtensionContext) {
 			{
 				vscode.window.showErrorMessage(`Failed building '${build.buildInfo.buildTargetId}'. error: ${result.error}`);
 			}
+		}
+		catch(e) {
+			vscode.window.showErrorMessage(`Failed building '${build.buildInfo.buildTargetId}'. error: ${e}`);
+		}
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.createShare', async (build: BuildTreeItem) => {
+		if (build.buildInfo.buildStatus != "success") {
+			vscode.window.showErrorMessage(`Create Share Link is available for successful builds only.`);
+			return;
+		}
+		try {
+			console.log("createShareUrl:" + build.buildInfo.createShareUrl);
+			await apiLoader.createShare(build.buildInfo.createShareUrl);
+			buildTreeDataProvider.redraw();
 		}
 		catch(e) {
 			vscode.window.showErrorMessage(`Failed building '${build.buildInfo.buildTargetId}'. error: ${e}`);

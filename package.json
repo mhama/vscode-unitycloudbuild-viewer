@@ -49,6 +49,10 @@
         "title": "Build Again"
       },
       {
+        "command": "cloudbuildexplorer.createShare",
+        "title": "Create Share Link"
+      },
+      {
         "command": "cloudbuildexplorer.clearFilter",
         "title": "Clear Filter"
       },
@@ -108,6 +112,10 @@
           "when": "view == cloudbuildexplorer && viewItem == builditem"
         },
         {
+          "command": "cloudbuildexplorer.createShare",
+          "when": "view == cloudbuildexplorer && viewItem == builditem"
+        },
+        {
           "command": "cloudbuildexplorer.clearFilter",
           "when": "view == cloudbuildexplorer && viewItem == filter"
         }
@@ -160,6 +168,7 @@
     "typescript": "^4.4.3"
   },
   "dependencies": {
+    "axios": "^0.21.4",
     "memory-streams": "^0.1.3",
     "openapi-client-axios": "^4.1.0"
   },

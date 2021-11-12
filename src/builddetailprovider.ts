@@ -1,13 +1,19 @@
+import { createCipheriv } from 'crypto';
 import * as vscode from 'vscode';
-import { BuildInfo } from './apiloader';
+import { ApiLoader, BuildInfo } from './apiloader';
+
+const shareLinkUrlBase = "https://developer.cloud.unity3d.com/share/share.html?shareId=";
 
 export class BuildDetailContentProvider implements vscode.TextDocumentContentProvider {
 	uri: vscode.Uri;
     currentBuild: BuildInfo;
 	onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
 	onDidChange = this.onDidChangeEmitter.event;
+	apiLoader: ApiLoader;
+	shareLink: string;
 
-	constructor() {
+	constructor(apiLoader: ApiLoader) {
+		this.apiLoader = apiLoader;
 		console.log("CloudBuildLogContentProvider constructor");
 	}
 
@@ -26,6 +32,7 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		"Branch: " + this.currentBuild.scmBranch + "\n" +
 		"Commit Id: " + this.currentBuild.commitId + "\n" +
 		this.buildTimeText() + "\n" +
+		this.shareLinkText() + "\n" +
 		"\n" +
 		"Detail: " + this.currentBuild.detailText + "\n";
 	}
@@ -37,12 +44,41 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		return "Build Time: " + this.getDurationStringFromSec(this.currentBuild.totalTimeInSeconds);
 	}
 
+	shareLinkText() : string {
+		if (this.shareLink == null) {
+			return "Share Link: ";
+		}
+		return "Share Link: " + shareLinkUrlBase + this.shareLink;
+	}
+
 	getBuildName() {
 		return this.currentBuild.buildTargetId + " #" + this.currentBuild.build;
 	}
 
 	setCurrentBuild(build : BuildInfo) {
 		this.currentBuild = build;
+		this.shareLink = null;
+		this.onDidChangeEmitter.fire(this.uri);
+		this.ShareLinkGetter(build); // 非同期メソッドだが待たない。
+	}
+
+	async ShareLinkGetter(build : BuildInfo) {
+		// share link is not needed for failed or running builds
+		if (build.buildStatus != "success") {
+			return;
+		}
+		try {
+			var share = await this.apiLoader.getShare(build.buildTargetId, build.build);
+		}
+		catch(e) {
+			console.log("ShareLinkGetter error: ", e);
+			return;
+		}
+		// APIのレスポンスを待っている間に表示対象ビルドが変わっていることがあるので、その場合は捨てる。
+		if (this.currentBuild.buildTargetId != build.buildTargetId || this.currentBuild.build != build.build) {
+			return;
+		}
+		this.shareLink = share.shareId;
 		this.onDidChangeEmitter.fire(this.uri);
 	}
 }

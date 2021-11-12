@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import OpenAPIClientAxios from 'openapi-client-axios';
 import { Client as CloudBuildClient, Paths } from './cloudbuildapi';
+import axios from 'axios'
 
 const cloudBuildLogUrlBase = "https://build-api.cloud.unity3d.com";
 const cloudBuildLogScheme = "unitycloudbuildviewer";
@@ -8,6 +9,7 @@ const cloudBuildLogScheme = "unitycloudbuildviewer";
 type GetBuildsResponseItemType = Paths.GetBuilds.Responses.$200[0];
 type GetBuildTargetsResponseItemType = Paths.GetBuildTargets.Responses.$200[0];
 type GetListProjectsForUserResponseItemType = Paths.ListProjectsForUser.Responses.$200[0];
+type GetShareResponseItemType = Paths.GetShare.Responses.$200;
 
 export class ApiLoader
 {
@@ -116,6 +118,34 @@ export class ApiLoader
         console.log('getBuildTargets result:', res.data);
         return res.data.map(p => new BuildTargetInfo(p));
     }
+
+    async getShare(buildTargetId: string, buildNumber: number) : Promise<ShareInfo> {
+        this.checkApiKey();
+        const orgAndProject = this.getOrgAndProjectParams();
+        const client = await this.api.init<CloudBuildClient>();
+        const res = await client.getShare({...orgAndProject, buildtargetid: buildTargetId, number: buildNumber})
+        console.log('getShare result:', res.data);
+        const share = res.data as GetShareResponseItemType;
+        if (share == null) {
+            throw "getShare failed.";
+        }
+        return new ShareInfo(share);
+    }
+
+    // for create share, url is provided inside build info.
+    async createShare(url: string) {
+        this.checkApiKey();
+        const orgAndProject = this.getOrgAndProjectParams();
+        const res = await axios.post(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + this.currentApiKey,
+            },
+        });
+        if (res.status != 200) {
+            throw `createShare failed. status: ${res.status} url: ${url}`;
+        }
+    }
 }
 
 export class ProjectInfo
@@ -152,6 +182,7 @@ export class BuildInfo
     checkoutStartTime?: Date;
     finishedTime?: Date;
     createdTime?: Date;
+    createShareUrl?: string;
 
     constructor(build: GetBuildsResponseItemType) {
         console.log("creating BuildInfo.", build);
@@ -170,6 +201,8 @@ export class BuildInfo
         this.checkoutStartTime = (build.checkoutStartTime != null) ? new Date(build.checkoutStartTime) : null;
         this.finishedTime = (build.finished != null) ? new Date(build.finished) : null;
         this.createdTime = (build.created != null) ? new Date(build.created) : null;
+        const createShareLink = build.links?.create_share?.href;
+        this.createShareUrl = (createShareLink != null) ? (cloudBuildLogUrlBase + createShareLink) : null;
     }
 
     getLogTextUri(): vscode.Uri {
@@ -197,10 +230,20 @@ export class BuildTargetInfo
     detailText: string;
 
     constructor(buildtarget: GetBuildTargetsResponseItemType) {
-        console.log("creating BuildTargetInfo.", buildtarget);
         this.buildTargetId = buildtarget.buildtargetid;
         this.name = buildtarget.name;
         this.platform = buildtarget.platform;
         this.detailText = JSON.stringify(buildtarget, null, 2);
+    }
+}
+
+export class ShareInfo
+{
+    shareId?: string;
+    shareExpirationTime: Date;
+
+    constructor(share: GetShareResponseItemType) {
+        this.shareId = share.shareid;
+        this.shareExpirationTime = (share.shareExpiry != null) ? new Date(share.shareExpiry) : null;
     }
 }

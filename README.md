@@ -8,6 +8,7 @@ This extension is for viewing Unity Cloud Build build logs in much stress-free w
 * Show build details.
 * Load build logs progressively.
   * Can be launched from build detail view, or context menu of the `Unity Cloud Build` explorer view.
+* Trigger rebuild/cancel from build history.
 
 # Setup
 

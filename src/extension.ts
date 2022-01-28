@@ -72,6 +72,16 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}));
 
+	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.cancelBuild', async (build: BuildTreeItem) => {
+		try {
+			var result = await apiLoader.cancelBuild(build.buildInfo.buildTargetId, build.buildInfo.build);
+			buildTreeDataProvider.reload();
+		}
+		catch(e) {
+			vscode.window.showErrorMessage(`Failed canceling '${build.buildInfo.buildTargetId} #${build.buildInfo.build}'. error: ${e}`);
+		}
+	}));
+
 	context.subscriptions.push(vscode.commands.registerCommand('cloudbuildexplorer.createShare', async (build: BuildTreeItem) => {
 		if (build.buildInfo.buildStatus != "success") {
 			vscode.window.showErrorMessage(`Create Share Link is available for successful builds only.`);

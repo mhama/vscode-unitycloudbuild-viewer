@@ -49,6 +49,10 @@
         "title": "Build Again"
       },
       {
+        "command": "cloudbuildexplorer.cancelBuild",
+        "title": "Cancel Build"
+      },
+      {
         "command": "cloudbuildexplorer.createShare",
         "title": "Create Share Link"
       },
@@ -118,6 +122,10 @@
         {
           "command": "cloudbuildexplorer.clearFilter",
           "when": "view == cloudbuildexplorer && viewItem == filter"
+        },
+        {
+          "command": "cloudbuildexplorer.cancelBuild",
+          "when": "view == cloudbuildexplorer && viewItem == builditem"
         }
       ]
     },

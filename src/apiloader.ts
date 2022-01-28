@@ -119,6 +119,15 @@ export class ApiLoader
         return res.data.map(p => new BuildTargetInfo(p));
     }
 
+    async cancelBuild(buildTargetId: string, buildNumber: number) : Promise<string> {
+        this.checkApiKey();
+        const orgAndProject = this.getOrgAndProjectParams();
+        const client = await this.api.init<CloudBuildClient>();
+        const res = await client.cancelBuild({...orgAndProject, buildtargetid: buildTargetId, number: buildNumber})
+        console.log('cancelBuild result:', res.data);
+        return res.data;
+    }
+
     async getShare(buildTargetId: string, buildNumber: number) : Promise<ShareInfo> {
         this.checkApiKey();
         const orgAndProject = this.getOrgAndProjectParams();

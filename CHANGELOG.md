@@ -31,3 +31,7 @@
 * Version 0.0.9
   * add share link on build detail page
   * add Create Share Link command for builds
+
+* Version 0.1.0
+  * fix share format on build detail page
+  * add canceling of builds

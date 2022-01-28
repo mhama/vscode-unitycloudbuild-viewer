@@ -48,7 +48,7 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		if (this.shareLink == null) {
 			return "Share Link: ";
 		}
-		return "Share Link: " + shareLinkUrlBase + this.shareLink;
+		return "Share Link: " + "`" + this.getBuildName() + "` " + shareLinkUrlBase + this.shareLink;
 	}
 
 	getBuildName() {

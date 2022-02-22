@@ -35,3 +35,6 @@
 * Version 0.1.0
   * fix share format on build detail page
   * add canceling of builds
+
+* Version 0.1.1
+  * add caching of build targets

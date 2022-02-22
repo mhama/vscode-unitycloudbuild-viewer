@@ -28,6 +28,11 @@ export function activate(context: vscode.ExtensionContext) {
 	const buildTreeDataProvider = new BuildTreeDataProvider(apiLoader);
 	const treeView = createTreeView(buildTreeDataProvider, buildDetailProvider);
 
+	// load Build Configs (speedup filter selection)
+	if (apiLoader.isConfigured()) {
+		apiLoader.getBuildTargetsCached(false);
+	}
+
 	// redraw tree view (update time information)
 	treeRedrawTimer = setInterval(() => {
 		console.log("interval redraw");
@@ -129,6 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
 		await context.globalState.update("projectId", result.project.projectId);
 		await context.globalState.update("orgId", result.project.orgId);
 		buildTreeDataProvider.reload();
+		apiLoader.getBuildTargetsCached(false);
 		//vscode.commands.executeCommand("onView:cloudbuildexplorer");
 		vscode.window.showInformationMessage('Setup of UnityCloudBuildViewer completed!');
 	}));
@@ -189,18 +195,26 @@ function openSettings()
 // show configs selector and apply filter to tree view
 async function processBuildFilter(apiLoader: ApiLoader, buildTreeDataProvider: BuildTreeDataProvider)
 {
-	const buildTargets = await getBuildTargetsWithProgress(apiLoader);
-	const sortedBuildTargets = buildTargets.sort((a,b) =>  (a.name > b.name ? 1 : -1));
-	const pickItems = sortedBuildTargets.map(i => {
-		return new class implements vscode.QuickPickItem {
-			label: string;
-			buildTarget: BuildTargetInfo;
-			constructor() {
-				this.label = i.name;
-				this.buildTarget = i;
-			}
+	class BuildTargetPickItem implements vscode.QuickPickItem {
+		label: string;
+		buildTarget: BuildTargetInfo;
+		constructor(buildTarget: BuildTargetInfo) {
+			this.label = buildTarget.name;
+			this.buildTarget = buildTarget;
 		}
-	});
+	}
+
+	class ReloadPickItem implements vscode.QuickPickItem {
+		label: string;
+		constructor() {
+			this.label = "Reload Configs...";
+		}
+	}
+
+	const buildTargets = await getBuildTargetsWithProgress(apiLoader, false);
+	const sortedBuildTargets = buildTargets.sort((a,b) =>  (a.name > b.name ? 1 : -1));
+	var pickItems : (BuildTargetPickItem|ReloadPickItem)[] = sortedBuildTargets.map(i => new BuildTargetPickItem(i));
+	pickItems.unshift(new ReloadPickItem());
 	const options = new class implements vscode.QuickPickOptions {
 		canPickMany: boolean;
 		title: string;
@@ -208,19 +222,24 @@ async function processBuildFilter(apiLoader: ApiLoader, buildTreeDataProvider: B
 		constructor() {
 			this.canPickMany = false;
 			this.title = "Please select a config to filter builds.";
-			this.placeHolder = "FIlter by config name...";
+			this.placeHolder = "Filter by config name...";
 		}
 	};
 	const selected = await vscode.window.showQuickPick(pickItems, options);
 	if (selected == null) {
 		return;
 	}
-	buildTreeDataProvider.filterByConfig(selected.buildTarget);
+	if (selected instanceof ReloadPickItem) {
+		await getBuildTargetsWithProgress(apiLoader, true);
+		vscode.commands.executeCommand('cloudbuildexplorer.filterBuilds');
+		return;
+	}
+	buildTreeDataProvider.filterByConfig((selected as BuildTargetPickItem).buildTarget);
 	buildTreeDataProvider.reload();
 	vscode.window.showInformationMessage('picked filter:' + selected.label);
 }
 
-async function getBuildTargetsWithProgress(apiLoader: ApiLoader): Promise<BuildTargetInfo[]>
+async function getBuildTargetsWithProgress(apiLoader: ApiLoader, reload: boolean): Promise<BuildTargetInfo[]>
 {
 	return await vscode.window.withProgress<BuildTargetInfo[]>({
 		location: vscode.ProgressLocation.Notification,
@@ -229,7 +248,7 @@ async function getBuildTargetsWithProgress(apiLoader: ApiLoader): Promise<BuildT
 	}, async (progress) => {
 		let buildTargetInfo: BuildTargetInfo[];
 		progress.report({ increment: 0 });
-		buildTargetInfo = await apiLoader.getBuildTargets();
+		buildTargetInfo = await apiLoader.getBuildTargetsCached(reload);
 		progress.report({ increment: 100 });
 		return buildTargetInfo;
 	});

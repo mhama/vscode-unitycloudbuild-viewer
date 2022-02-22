@@ -11,11 +11,31 @@ type GetBuildTargetsResponseItemType = Paths.GetBuildTargets.Responses.$200[0];
 type GetListProjectsForUserResponseItemType = Paths.ListProjectsForUser.Responses.$200[0];
 type GetShareResponseItemType = Paths.GetShare.Responses.$200;
 
+class BuildTargetsCache
+{
+    buildTargets : BuildTargetInfo[]
+    reloadTime : number
+
+    currentBuildTargets() : BuildTargetInfo[] {
+        return this.isExpired() ? null : this.buildTargets;
+    }
+
+    update(buildTargets : BuildTargetInfo[]) {
+        this.buildTargets = buildTargets;
+        this.reloadTime = Date.now();
+    }
+
+    isExpired() : boolean {
+        return Date.now() - this.reloadTime > 3 * 24 * 60 * 60 * 1000; // keep cache 3 days
+    }
+}
+
 export class ApiLoader
 {
     context: vscode.ExtensionContext;
     definitionFilePath: string;
 	apiKeyProvider: () => string;
+    buildTargetsCache = new BuildTargetsCache();
 
     api: OpenAPIClientAxios;
     currentApiKey: string;
@@ -117,6 +137,18 @@ export class ApiLoader
         const res = await client.getBuildTargets({...orgAndProject})
         console.log('getBuildTargets result:', res.data);
         return res.data.map(p => new BuildTargetInfo(p));
+    }
+
+    async getBuildTargetsCached(reload: boolean) : Promise<BuildTargetInfo[]> {
+        const cachedBuildTargets = this.buildTargetsCache.currentBuildTargets();
+        if (!reload && cachedBuildTargets != null) {
+            return cachedBuildTargets;
+        }
+        var buildTargets = await this.getBuildTargets();
+        if (buildTargets != null) {
+            this.buildTargetsCache.update(buildTargets);
+        }
+        return buildTargets;
     }
 
     async cancelBuild(buildTargetId: string, buildNumber: number) : Promise<string> {

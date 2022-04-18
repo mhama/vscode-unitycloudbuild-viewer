@@ -18,6 +18,14 @@ After that, push `Ctrl+P` to show the command palette and select `'Unity Cloud B
 If the api key was correct, you can choose a target project from existing projects.
 Then, `Unity Cloud Build` explorer view will work and it will show the latest builds.
 
+# Development
+
+to publish:
+
+```sh
+vsce publish
+```
+
 # License
 
 MIT

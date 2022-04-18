@@ -10,6 +10,7 @@ type GetBuildsResponseItemType = Paths.GetBuilds.Responses.$200[0];
 type GetBuildTargetsResponseItemType = Paths.GetBuildTargets.Responses.$200[0];
 type GetListProjectsForUserResponseItemType = Paths.ListProjectsForUser.Responses.$200[0];
 type GetShareResponseItemType = Paths.GetShare.Responses.$200;
+type GetBuildTargetResponseItemType = Paths.GetBuildTarget.Responses.$200;
 
 class BuildTargetsCache
 {
@@ -187,6 +188,19 @@ export class ApiLoader
             throw `createShare failed. status: ${res.status} url: ${url}`;
         }
     }
+
+    async getBuildTargetDetail(buildTargetId: string) : Promise<BuildTargetDetailInfo> {
+        this.checkApiKey();
+        const orgAndProject = this.getOrgAndProjectParams();
+        const client = await this.api.init<CloudBuildClient>();
+        const res = await client.getBuildTarget({...orgAndProject, buildtargetid: buildTargetId})
+        console.log('getBuildTargetDetail result:', res.data);
+        const data = res.data as GetBuildTargetResponseItemType;
+        if (data == null) {
+            throw "getBuildTargetDetail failed.";
+        }
+        return new BuildTargetDetailInfo(data);
+    }
 }
 
 export class ProjectInfo
@@ -275,6 +289,21 @@ export class BuildTargetInfo
         this.name = buildtarget.name;
         this.platform = buildtarget.platform;
         this.detailText = JSON.stringify(buildtarget, null, 2);
+    }
+}
+
+export class BuildTargetDetailInfo
+{
+    buildTargetId: string;
+    name: string;
+    platform?: string;
+    detailText: string;
+
+    constructor(buildtarget: GetBuildTargetResponseItemType) {
+        this.buildTargetId = buildtarget.buildtargetid;
+        this.name = buildtarget.name;
+        this.platform = buildtarget.platform;
+        this.detailText = JSON.stringify({buildTarget: buildtarget, settings: buildtarget.settings}, null, 2);
     }
 }
 

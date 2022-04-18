@@ -1,6 +1,6 @@
 import { createCipheriv } from 'crypto';
 import * as vscode from 'vscode';
-import { ApiLoader, BuildInfo } from './apiloader';
+import { ApiLoader, BuildInfo, BuildTargetDetailInfo } from './apiloader';
 
 const shareLinkUrlBase = "https://developer.cloud.unity3d.com/share/share.html?shareId=";
 
@@ -11,6 +11,7 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 	onDidChange = this.onDidChangeEmitter.event;
 	apiLoader: ApiLoader;
 	shareLink: string;
+	buildTargetDetail: BuildTargetDetailInfo;
 
 	constructor(apiLoader: ApiLoader) {
 		this.apiLoader = apiLoader;
@@ -34,7 +35,8 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		this.buildTimeText() + "\n" +
 		this.shareLinkText() + "\n" +
 		"\n" +
-		"Detail: " + this.currentBuild.detailText + "\n";
+		"Detail: " + this.currentBuild.detailText + "\n" +
+		"Config: " + this.buildTargetDetail?.detailText + "\n";
 	}
 
 	buildTimeText() : string {
@@ -58,8 +60,10 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 	setCurrentBuild(build : BuildInfo) {
 		this.currentBuild = build;
 		this.shareLink = null;
+		this.buildTargetDetail = null;
 		this.onDidChangeEmitter.fire(this.uri);
 		this.ShareLinkGetter(build); // 非同期メソッドだが待たない。
+		this.BuildTargetDetailGetter(build);
 	}
 
 	async ShareLinkGetter(build : BuildInfo) {
@@ -79,6 +83,22 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 			return;
 		}
 		this.shareLink = share.shareId;
+		this.onDidChangeEmitter.fire(this.uri);
+	}
+
+	async BuildTargetDetailGetter(build : BuildInfo) {
+		try {
+			var buildTargetDetail = await this.apiLoader.getBuildTargetDetail(build.buildTargetId);
+		}
+		catch(e) {
+			console.log("BuildTargetDetailGetter error: ", e);
+			return;
+		}
+		// APIのレスポンスを待っている間に表示対象ビルドが変わっていることがあるので、その場合は捨てる。
+		if (this.currentBuild.buildTargetId != build.buildTargetId || this.currentBuild.build != build.build) {
+			return;
+		}
+		this.buildTargetDetail = buildTargetDetail
 		this.onDidChangeEmitter.fire(this.uri);
 	}
 }

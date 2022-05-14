@@ -38,3 +38,6 @@
 
 * Version 0.1.1
   * add caching of build targets
+
+* Version 0.1.2
+  * show build config on build detail view

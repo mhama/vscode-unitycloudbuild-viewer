@@ -12,7 +12,7 @@ export class BuildTreeDataProvider implements vscode.TreeDataProvider<TreeItem> 
     treeItems?: TreeItem[];
 
     itemsPerPage: number = 20;
-    maxPages: number = 5;
+    maxPages: number = 10;
     loadId: number = 0;
 
     constructor(apiLoader: ApiLoader) {

@@ -303,7 +303,7 @@ export class BuildTargetDetailInfo
         this.buildTargetId = buildtarget.buildtargetid;
         this.name = buildtarget.name;
         this.platform = buildtarget.platform;
-        this.detailText = JSON.stringify({buildTarget: buildtarget, settings: buildtarget.settings}, null, 2);
+        this.detailText = JSON.stringify(buildtarget, null, 2);
     }
 }
 

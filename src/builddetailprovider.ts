@@ -26,6 +26,7 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 	}
 
 	provideTextDocumentContent(uri: vscode.Uri): string {
+		console.warn("provideTextDocumentContent called.");
 		this.uri = uri;
 		return "Name: " + "`" + this.getBuildName() + "`" + "\n" + 
 		"Status: " + this.currentBuild.buildStatus + "\n" +
@@ -36,7 +37,8 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		this.shareLinkText() + "\n" +
 		"\n" +
 		"Detail: " + this.currentBuild.detailText + "\n" +
-		"Config: " + this.buildTargetDetail?.detailText + "\n";
+		"\n" +
+		this.configText() + "\n";
 	}
 
 	buildTimeText() : string {
@@ -47,10 +49,23 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 	}
 
 	shareLinkText() : string {
-		if (this.shareLink == null) {
+		if (this.shareLink === undefined) {
+			return "Share Link: (loading...)";
+		}
+		if (this.shareLink === null) {
 			return "Share Link: ";
 		}
 		return "Share Link: " + "`" + this.getBuildName() + "` " + shareLinkUrlBase + this.shareLink;
+	}
+
+	configText() : string {
+		if (this.buildTargetDetail === undefined) {
+			return "Config: (loading...)";
+		}
+		if (this.buildTargetDetail === null) {
+			return "Config: (not available)";
+		}
+		return "Config: " + this.buildTargetDetail?.detailText;
 	}
 
 	getBuildName() {
@@ -59,16 +74,19 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 
 	setCurrentBuild(build : BuildInfo) {
 		this.currentBuild = build;
-		this.shareLink = null;
-		this.buildTargetDetail = null;
-		this.onDidChangeEmitter.fire(this.uri);
-		this.ShareLinkGetter(build); // 非同期メソッドだが待たない。
+		this.shareLink = undefined; // undefined means loading. null means no data or error.
+		this.buildTargetDetail = undefined; // undefined means loading. null means no data or error.
+		this.ShareLinkGetter(build); // async method but don't await
 		this.BuildTargetDetailGetter(build);
+		this.onDidChangeEmitter.fire(this.uri);
 	}
 
 	async ShareLinkGetter(build : BuildInfo) {
 		// share link is not needed for failed or running builds
 		if (build.buildStatus != "success") {
+			console.warn("set shareLink = null");
+			this.shareLink = null;
+			this.onDidChangeEmitter.fire(this.uri);
 			return;
 		}
 		try {
@@ -76,13 +94,14 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		}
 		catch(e) {
 			console.log("ShareLinkGetter error: ", e);
-			return;
+			share = null;
+			// nullの結果を表示するため、このまま下に流す
 		}
 		// APIのレスポンスを待っている間に表示対象ビルドが変わっていることがあるので、その場合は捨てる。
 		if (this.currentBuild.buildTargetId != build.buildTargetId || this.currentBuild.build != build.build) {
 			return;
 		}
-		this.shareLink = share.shareId;
+		this.shareLink = share?.shareId;
 		this.onDidChangeEmitter.fire(this.uri);
 	}
 
@@ -92,7 +111,8 @@ export class BuildDetailContentProvider implements vscode.TextDocumentContentPro
 		}
 		catch(e) {
 			console.log("BuildTargetDetailGetter error: ", e);
-			return;
+			buildTargetDetail = null;
+			// nullの結果を表示するため、このまま下に流す
 		}
 		// APIのレスポンスを待っている間に表示対象ビルドが変わっていることがあるので、その場合は捨てる。
 		if (this.currentBuild.buildTargetId != build.buildTargetId || this.currentBuild.build != build.build) {
